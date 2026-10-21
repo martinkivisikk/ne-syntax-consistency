@@ -30,7 +30,7 @@ def _(storage):
 @app.cell
 def _(storage):
     # Võtame ette lausete testkollektsiooni
-    collection = storage['koondkorpus_sentences_test_5000_sg_thread']
+    collection = storage['koondkorpus_sentences']
     collection
     return (collection,)
 
@@ -56,7 +56,6 @@ def _(collection, mo):
 
 @app.cell
 def _(mo):
-    # marimo käivitab rakud sõltuvuste järjekorras, seega sulgemine käib nupuga
     close_button = mo.ui.run_button(label="Sulge ühendus")
     close_button
     return (close_button,)
