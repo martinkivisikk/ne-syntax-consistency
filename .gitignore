@@ -8,3 +8,8 @@ wheels/
 
 # Virtual environments
 .venv
+
+.ipynb_checkpoints
+.env
+data/
+pgpass.txt
