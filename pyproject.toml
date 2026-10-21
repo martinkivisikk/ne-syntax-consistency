@@ -1,0 +1,17 @@
+[project]
+name = "ne-syntax-consistency"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Martin Kivisikk", email = "martin.kivisikk@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = []
+
+[project.scripts]
+ne-syntax-consistency = "ne_syntax_consistency:main"
+
+[build-system]
+requires = ["uv_build>=0.13.3,<0.14.0"]
+build-backend = "uv_build"
