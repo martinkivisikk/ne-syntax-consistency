@@ -15,7 +15,9 @@ def get_storage() -> PostgresStorage:
     load_dotenv(ENV_FILE)
     missing = [var for var in REQUIRED_VARS if not os.environ.get(var)]
     if missing:
-        raise RuntimeError(f"Missing database settings: {', '.join(missing)} (see .env.example)")
+        raise RuntimeError(
+            f"Missing database settings: {', '.join(missing)} (see .env.example)"
+        )
     return PostgresStorage(
         host=os.environ["KK_HOST"],
         port=int(os.environ["KK_PORT"]),
