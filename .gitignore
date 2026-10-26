@@ -13,3 +13,5 @@ __marimo__/
 .env
 data/
 pgpass.txt
+*.parquet
+*.csv
