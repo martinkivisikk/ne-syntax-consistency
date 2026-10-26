@@ -10,6 +10,7 @@ requires-python = ">=3.12"
 dependencies = [
     "conllu>=6.0.0",
     "estnltk==1.7.5",
+    "gspan-mining>=0.2.3",
     "networkx>=3.7",
     "pandas>=3.0.6",
     "psycopg2-binary>=2.9.13",
