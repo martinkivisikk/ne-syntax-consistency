@@ -47,3 +47,21 @@ def test_left_dependents_and_forest():
     row = span_tree(s, [1, 4], "ORG")
     assert row["pattern"] == "ORG + ORG"
     assert (row["n_roots"], row["ext_deprel"]) == (2, "nmod+conj")
+
+
+def test_merge_support_tables_matches_support_table():
+    import pandas as pd
+
+    from ne_syntax_consistency.spans import merge_support_tables, support_table
+
+    spans = pd.DataFrame(
+        {
+            "nertag": ["PER", "PER", "LOC", "PER", "LOC", "ORG"],
+            "pattern": ["PER", "PER [flat PER]", "LOC", "PER", "LOC", "ORG"],
+            "n_words": [1, 2, 1, 1, 1, 1],
+            "n_roots": [1, 1, 1, 1, 1, 1],
+            "ne_text": ["Laar", "Mart Laar", "Tartu", "Kask", "Pärnu", "Delfi"],
+        }
+    )
+    merged = merge_support_tables([support_table(spans[:3]), support_table(spans[3:])])
+    pd.testing.assert_frame_equal(merged, support_table(spans))
