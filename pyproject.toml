@@ -28,8 +28,10 @@ build-backend = "uv_build"
 
 [dependency-groups]
 dev = [
+    "ipykernel>=7.4.0",
     "jinja2>=3.1.6",
-    "marimo>=0.25.2",
+    "jupyterlab>=4.6.6",
+    "nbstripout>=0.9.1",
     "pytest>=9.1.1",
     "ruff>=0.17.1",
 ]

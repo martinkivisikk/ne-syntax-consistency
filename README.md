@@ -8,7 +8,7 @@ Requires Python 3.12 and [uv](https://docs.astral.sh/uv/).
 
 ```bash
 uv sync
-uv run marimo edit notebooks/
+uv run jupyter lab notebooks/
 ```
 
 Put your credentials in a `.env` file in the project root (it is gitignored):

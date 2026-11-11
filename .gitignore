@@ -9,7 +9,7 @@ wheels/
 # Virtual environments
 .venv
 
-__marimo__/
+.ipynb_checkpoints/
 .env
 data/
 pgpass.txt
