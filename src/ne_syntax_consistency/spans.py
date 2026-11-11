@@ -94,3 +94,49 @@ def support_table(spans: pd.DataFrame) -> pd.DataFrame:
         "support"
     ].transform("sum")
     return table.sort_values(["nertag", "support"], ascending=[True, False])
+
+
+def top_patterns(table: pd.DataFrame, min_support: int, top_n: int) -> pd.DataFrame:
+    """The top_n most frequent patterns per NE type with support >= min_support."""
+    top = (
+        table[table["support"] >= min_support]
+        .sort_values(["nertag", "support"], ascending=[True, False])
+        .groupby("nertag", group_keys=False)
+        .head(top_n)
+    )
+    return top.assign(rank=top.groupby("nertag").cumcount() + 1)
+
+
+def sample_examples(
+    spans: pd.DataFrame, top: pd.DataFrame, n: int, seed: int, distinct: bool = True
+) -> pd.DataFrame:
+    """Up to n random spans for each (nertag, pattern) in top.
+
+    With distinct=True, each span text (ne_text) is drawn at most once per
+    pattern, so one very frequent name (e.g. "/ EMÜ" from EU directive numbers)
+    cannot fill a pattern's examples; spans are shuffled and the first span of
+    each text is kept, so texts are drawn in proportion to their frequency but
+    without replacement (frequent names appear once, next to rare ones).
+    ne_text_count is the number of the pattern's spans with that text, to
+    weight labels back to span level. With distinct=False, spans are drawn uniformly. The same
+    arguments give the same examples (the export script and notebook 04 agree).
+    """
+    examples = []
+    for p in top.itertuples():
+        m = spans[(spans["nertag"] == p.nertag) & (spans["pattern"] == p.pattern)]
+        counts = m["ne_text"].value_counts()
+        if distinct:
+            drawn = (
+                m.sample(frac=1, random_state=seed).drop_duplicates("ne_text").head(n)
+            )
+        else:
+            drawn = m.sample(n=min(n, len(m)), random_state=seed)
+        examples.append(
+            drawn.assign(
+                rank=p.rank,
+                support=p.support,
+                share_of_type=p.share_of_type,
+                ne_text_count=drawn["ne_text"].map(counts).to_numpy(),
+            )
+        )
+    return pd.concat(examples, ignore_index=True)

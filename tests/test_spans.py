@@ -47,3 +47,39 @@ def test_left_dependents_and_forest():
     row = span_tree(s, [1, 4], "ORG")
     assert row["pattern"] == "ORG + ORG"
     assert (row["n_roots"], row["ext_deprel"]) == (2, "nmod+conj")
+
+
+def test_top_patterns_and_sample_examples():
+    import pandas as pd
+
+    from ne_syntax_consistency.spans import (
+        sample_examples,
+        support_table,
+        top_patterns,
+    )
+
+    spans = pd.DataFrame(
+        {
+            "text_id": range(9),
+            "ne_index": 0,
+            "nertag": ["PER"] * 6 + ["LOC"] * 3,
+            "pattern": ["A"] * 4 + ["B"] * 2 + ["C"] * 3,
+            "n_words": 1,
+            "n_roots": 1,
+            "ne_text": ["x", "x", "x", "y"] + ["z"] * 5,
+        }
+    )
+    top = top_patterns(support_table(spans), min_support=2, top_n=1)
+    assert top[["nertag", "pattern", "rank"]].values.tolist() == [
+        ["LOC", "C", 1],
+        ["PER", "A", 1],
+    ]
+    ex = sample_examples(spans, top, n=3, seed=1, distinct=False)
+    assert ex.groupby("pattern").size().to_dict() == {"A": 3, "C": 3}
+    assert set(ex[ex["pattern"] == "A"]["text_id"]) <= {0, 1, 2, 3}
+    assert ex.equals(sample_examples(spans, top, n=3, seed=1, distinct=False))
+    # distinct: one example per span text, with that text's count in the pattern
+    ex = sample_examples(spans, top, n=3, seed=1)
+    a = ex[ex["pattern"] == "A"].set_index("ne_text")["ne_text_count"].to_dict()
+    assert a == {"x": 3, "y": 1}
+    assert ex[ex["pattern"] == "C"]["ne_text_count"].tolist() == [3]
