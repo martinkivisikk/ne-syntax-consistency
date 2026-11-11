@@ -12,7 +12,7 @@ lowest typed support, so every needed context is found (a context's support is
 at least that of each of its typed patterns).
 
 Use the same --level/--max-dependents/--max-vertices as the run_gspan.py run.
-Writes results/gspan_<level>_<sample>_pertype_confidence.csv and
+Writes results/gspan/gspan_<level>_<sample>_pertype_confidence.csv and
 .._exceptions.csv: for complete rules with confidence >= --min-confidence, every
 NE span in the rule's context whose type differs from the rule's (one row per
 rule and span; a span can break several rules).
@@ -36,7 +36,7 @@ from ne_syntax_consistency.gspan import (
     pattern_key,
 )
 
-RESULTS = Path(__file__).resolve().parents[1] / "results"
+RESULTS = Path(__file__).resolve().parents[1] / "results" / "gspan"
 
 
 def main() -> None:

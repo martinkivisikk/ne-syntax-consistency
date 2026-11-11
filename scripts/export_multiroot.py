@@ -4,8 +4,8 @@
 
 A span is multi-root when more than one of its words has its head outside the
 span (same definition as n_roots in notebooks/02_ne_inspection.py). Writes
-results/multiroot_<sample>.csv with empty label, error_type and note columns,
-in the format of results/multiroot_labels_20k.csv.
+results/multiroot/multiroot_<sample>.csv with empty label, error_type and note columns,
+in the format of results/multiroot/multiroot_labels_20k.csv.
 """
 
 import argparse
@@ -14,7 +14,7 @@ from pathlib import Path
 import pandas as pd
 import pyarrow.parquet as pq
 
-RESULTS = Path(__file__).resolve().parents[1] / "results"
+RESULTS = Path(__file__).resolve().parents[1] / "results" / "multiroot"
 
 
 def multiroot_rows(s: dict):
@@ -67,7 +67,7 @@ def main() -> None:
     columns = ["text_id", "text", "words", "head", "deprel", "ne_tag", "ne_words"]
     sentences = pq.read_table(args.sample, columns=columns).to_pylist()
     df = pd.DataFrame([r for s in sentences for r in multiroot_rows(s)])
-    RESULTS.mkdir(exist_ok=True)
+    RESULTS.mkdir(parents=True, exist_ok=True)
     path = RESULTS / f"multiroot_{args.sample.stem}.csv"
     df.to_csv(path, index=False)
     print(f"{len(df)} multi-root spans -> {path}")

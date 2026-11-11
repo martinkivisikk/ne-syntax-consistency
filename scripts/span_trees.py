@@ -6,7 +6,7 @@
 Every NE span contributes exactly one pattern: the tree of its words and the
 arcs between them (see ne_syntax_consistency.spans), so a pattern's support is
 the number of spans whose whole internal tree is that pattern; sub-patterns are
-not counted. Writes results/span_trees_<label>_<sample>.csv with support per
+not counted. Writes results/span_trees/span_trees_<label>_<sample>.csv with support per
 NE type and pattern, and the share of that type's spans (share_of_type), most
 frequent first, for patterns with support >= --min-support; the rarer patterns
 go to .._rare.csv. Shares are of all the type's spans, rare ones included.
@@ -21,7 +21,7 @@ import pyarrow.parquet as pq
 
 from ne_syntax_consistency.spans import LABELS, span_trees, support_table
 
-RESULTS = Path(__file__).resolve().parents[1] / "results"
+RESULTS = Path(__file__).resolve().parents[1] / "results" / "span_trees"
 
 
 def main() -> None:
@@ -53,7 +53,7 @@ def main() -> None:
     table = support_table(spans)
 
     stem = f"span_trees_{args.label}_{args.sample.stem}"
-    RESULTS.mkdir(exist_ok=True)
+    RESULTS.mkdir(parents=True, exist_ok=True)
     frequent = table["support"] >= args.min_support
     table[~frequent].to_csv(RESULTS / f"{stem}_rare.csv", index=False)
     table = table[frequent]

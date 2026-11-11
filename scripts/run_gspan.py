@@ -3,7 +3,7 @@
     uv run python scripts/export_sample.py --sentences 200000 --seed 1
     uv run python scripts/run_gspan.py data/sample_200000_s1.parquet --min-support 0.01
 
-Writes results/gspan_<level>_<sample>[_pertype].csv (patterns) and
+Writes results/gspan/gspan_<level>_<sample>[_pertype].csv (patterns) and
 .._graphs.parquet (one row per ego graph, indexed by the pattern graph_ids).
 `share` is support divided by the number of ego graphs in the pattern's group
 (all NE spans, or with --per-type the spans of one NE type).
@@ -18,7 +18,7 @@ import pyarrow.parquet as pq
 
 from ne_syntax_consistency.gspan import LEVELS, ego_graphs, mine
 
-RESULTS = Path(__file__).resolve().parents[1] / "results"
+RESULTS = Path(__file__).resolve().parents[1] / "results" / "gspan"
 
 
 def main() -> None:
@@ -106,7 +106,7 @@ def main() -> None:
     patterns = pd.concat(results, ignore_index=True)
     print(f"mine {time.perf_counter() - t0:.0f} s", flush=True)
 
-    RESULTS.mkdir(exist_ok=True)
+    RESULTS.mkdir(parents=True, exist_ok=True)
     stem = RESULTS / f"gspan_{args.level}_{args.sample.stem}"
     if args.per_type:
         stem = stem.with_name(stem.name + "_pertype")
