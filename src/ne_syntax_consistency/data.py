@@ -1,4 +1,6 @@
+import json
 import re
+import time
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -6,12 +8,21 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 from estnltk import Layer, Text
 from estnltk.converters.conll.conll_importer import conll_to_texts_list
+from estnltk.storage.postgres import PgCollection, collection_table_identifier
+from estnltk.storage.postgres.queries.layer_query import LayerQuery
+from estnltk.storage.postgres.queries.missing_layer_query import MissingLayerQuery
+from estnltk.storage.postgres.queries.slice_query import SliceQuery
 from estnltk.taggers import VabamorfTagger
+from psycopg2.sql import SQL
 
 from ne_syntax_consistency.db import get_storage
 
 COLLECTION = "koondkorpus_sentences"
-LAYERS = ["sentences", "morph_analysis", "v171_named_entities", "v172_stanza_syntax"]
+NE_LAYER = "v171_named_entities"
+LAYERS = ["sentences", "morph_analysis", NE_LAYER, "v172_stanza_syntax"]
+# All nertag values of NE_LAYER (checked on the 200k sample; export_range can
+# verify that no sentence with an NE is missed)
+NE_TAGS = ("PER", "LOC", "ORG")
 
 # One row per sentence; token lists are aligned with `words`
 SENTENCE_SCHEMA = pa.schema(
@@ -247,3 +258,89 @@ def export_sample(
     finally:
         storage.close()
     tmp.rename(path)
+
+
+def has_ne_query(tags: tuple[str, ...] = NE_TAGS) -> LayerQuery:
+    """estnltk query for sentences with at least one NE of the given tags."""
+    query = LayerQuery(NE_LAYER, nertag=tags[0])
+    for tag in tags[1:]:
+        query = query | LayerQuery(NE_LAYER, nertag=tag)
+    return query
+
+
+def count_missing_ne_layer(collection: PgCollection, start: int, stop: int) -> int:
+    """Number of sentences with ids in [start, stop) that have no NE layer stored."""
+    condition = SliceQuery(start, stop) & MissingLayerQuery(NE_LAYER)
+    table = collection_table_identifier(collection.storage, collection.name)
+    query = SQL("SELECT count(*) FROM {table} WHERE {condition}").format(
+        table=table, condition=condition.eval(collection)
+    )
+    with collection.storage.conn.cursor() as cur:
+        cur.execute(query)
+        return cur.fetchone()[0]
+
+
+def export_range(
+    collection: PgCollection,
+    path: Path,
+    start: int,
+    stop: int,
+    verify: bool = False,
+    itersize: int = 200,
+) -> dict:
+    """Write the sentences with NEs whose ids are in [start, stop) to Parquet.
+
+    Selects them with has_ne_query(). With verify=True, also loads the NE layer
+    of every sentence in the range and checks that exactly the sentences with
+    a non-empty NE layer were selected (raises ValueError otherwise).
+    The file is written to `path` only once complete, with the returned
+    statistics in its schema metadata under b"export".
+    """
+    t0 = time.perf_counter()
+    ids = SliceQuery(start, stop)
+    rows = []
+    selected = set()
+    skipped = 0
+    for text_id, text in collection.select(
+        ids & has_ne_query(), layers=LAYERS + ["words"], itersize=itersize
+    ):
+        selected.add(text_id)
+        record = sentence_record(text_id, text)
+        if record is None:
+            skipped += 1
+        else:
+            rows.append(record)
+    if verify:
+        expected = {
+            text_id
+            for text_id, text in collection.select(
+                ids, layers=[NE_LAYER], itersize=itersize
+            )
+            if len(text[NE_LAYER])
+        }
+        if expected != selected:
+            raise ValueError(
+                f"ids {start}-{stop}: has_ne_query selected {len(selected)} sentences,"
+                f" {len(expected)} have NEs; missed e.g."
+                f" {sorted(expected - selected)[:10]},"
+                f" extra e.g. {sorted(selected - expected)[:10]}"
+            )
+    stats = {
+        "start": start,
+        "stop": stop,
+        "sentences": len(rows),
+        "skipped": skipped,
+        "missing_ne_layer": count_missing_ne_layer(collection, start, stop),
+        "verified": verify,
+        "seconds": round(time.perf_counter() - t0, 1),
+    }
+    table = pa.Table.from_pylist(rows, SENTENCE_SCHEMA).replace_schema_metadata(
+        {b"export": json.dumps(stats).encode()}
+    )
+    tmp = path.with_suffix(".partial")
+    try:
+        pq.write_table(table, tmp)
+        tmp.rename(path)
+    finally:
+        tmp.unlink(missing_ok=True)
+    return stats

@@ -83,3 +83,21 @@ def test_top_patterns_and_sample_examples():
     a = ex[ex["pattern"] == "A"].set_index("ne_text")["ne_text_count"].to_dict()
     assert a == {"x": 3, "y": 1}
     assert ex[ex["pattern"] == "C"]["ne_text_count"].tolist() == [3]
+
+
+def test_merge_support_tables_matches_support_table():
+    import pandas as pd
+
+    from ne_syntax_consistency.spans import merge_support_tables, support_table
+
+    spans = pd.DataFrame(
+        {
+            "nertag": ["PER", "PER", "LOC", "PER", "LOC", "ORG"],
+            "pattern": ["PER", "PER [flat PER]", "LOC", "PER", "LOC", "ORG"],
+            "n_words": [1, 2, 1, 1, 1, 1],
+            "n_roots": [1, 1, 1, 1, 1, 1],
+            "ne_text": ["Laar", "Mart Laar", "Tartu", "Kask", "Pärnu", "Delfi"],
+        }
+    )
+    merged = merge_support_tables([support_table(spans[:3]), support_table(spans[3:])])
+    pd.testing.assert_frame_equal(merged, support_table(spans))

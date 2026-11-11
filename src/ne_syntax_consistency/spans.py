@@ -90,10 +90,37 @@ def support_table(spans: pd.DataFrame) -> pd.DataFrame:
         )
         .reset_index()
     )
+    return _with_shares(table)
+
+
+def merge_support_tables(tables: list[pd.DataFrame]) -> pd.DataFrame:
+    """Combine support_table results of consecutive chunks of spans.
+
+    Gives the same table as support_table on all spans at once: supports are
+    added up and n_words, n_roots and example come from the first chunk.
+    """
+    table = (
+        pd.concat(tables)
+        .groupby(["nertag", "pattern"], sort=False)
+        .agg(
+            support=("support", "sum"),
+            n_words=("n_words", "first"),
+            n_roots=("n_roots", "first"),
+            example=("example", "first"),
+        )
+        .reset_index()
+    )
+    return _with_shares(table)
+
+
+def _with_shares(table: pd.DataFrame) -> pd.DataFrame:
     table["share_of_type"] = table["support"] / table.groupby("nertag")[
         "support"
     ].transform("sum")
-    return table.sort_values(["nertag", "support"], ascending=[True, False])
+    # stable sort keeps ties in (nertag, pattern) order, as support_table does
+    return table.sort_values(
+        ["nertag", "support", "pattern"], ascending=[True, False, True]
+    ).reset_index(drop=True)
 
 
 def top_patterns(table: pd.DataFrame, min_support: int, top_n: int) -> pd.DataFrame:
