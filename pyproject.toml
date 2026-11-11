@@ -35,3 +35,7 @@ dev = [
     "pytest>=9.1.1",
     "ruff>=0.17.1",
 ]
+
+[tool.ruff]
+# Copied from ~/projects/estnltk-syntax-vis; keep it identical to the source
+extend-exclude = ["src/ne_syntax_consistency/syntax_vis"]
